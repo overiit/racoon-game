@@ -68,7 +68,7 @@ export class GameWorld {
 
         // load character spawnPoint
         const spawnPoint = new Object3D();
-        spawnPoint.position.set(0, 10, 0)
+        spawnPoint.position.set(0, 2, 0)
         this.mainSpawnPoint = new CharacterSpawnPoint(spawnPoint);
         this.mainSpawnPoint.spawn();
     }

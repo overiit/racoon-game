@@ -1,6 +1,5 @@
 import { Body, Material, RaycastResult, Vec3, World } from 'cannon-es';
 import { AnimationAction, AnimationClip, AnimationMixer, BoxGeometry, Group, MathUtils, Matrix4, Mesh, MeshLambertMaterial, Object3D, Quaternion, Vector3 } from 'three';
-import type { CharacterStateBase } from '../character_states/CharacterStateBase';
 import { Idle } from '../character_states/Idle';
 import { camera, gui, world } from '../engine/engine';
 import { getCurrentScene } from '../engine/SceneManager';
@@ -8,7 +7,6 @@ import type { Entity } from '../interfaces/Entity';
 import { GroundImpactData } from '../interfaces/GroundImpactData';
 import type { ICharacterState } from '../interfaces/ICharacterState';
 import { KeyBinding } from '../interfaces/KeyBinding';
-import { CapsuleCollider } from '../physics/colliders/CapsuleCollider';
 import { RelativeSpringSimulator } from '../physics/spring_simulation/RelativeSpringSimulator';
 import { VectorSpringSimulator } from '../physics/spring_simulation/VectorSpringSimulator';
 import { Vec3ToVector3, Vector3ToVec3 } from '../utils/Convert';

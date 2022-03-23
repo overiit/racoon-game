@@ -1,9 +1,11 @@
-import type { Mesh } from 'three';
+import { Ray, RaycastResult } from 'cannon-es';
+import { Mesh, Vector3 } from 'three';
 import * as THREE from 'three';
-import { camera } from '../engine/engine';
+import { camera, world } from '../engine/engine';
 import type { IInputReceiver } from '../interfaces/InputReceiver';
 import { KeyBinding } from '../interfaces/KeyBinding';
 import type { Tickable } from '../interfaces/Updatable';
+import { Vec3ToVector3, Vector3ToVec3 } from '../utils/Convert';
 import { getBack, getRight, getUp } from '../utils/Utils';
 import type { GameWorld } from '../world/GameWorld';
 import type { CharacterController } from './CharacterController';
@@ -22,6 +24,8 @@ export class CameraController implements IInputReceiver, Tickable
 	public onMouseDownTheta: any;
 	public onMouseDownPhi: any;
 	public targetRadius: number = 1;
+
+	public positionalRay: Ray;
 
 	public movementSpeed: number;
 	public actions: { [action: string]: KeyBinding };
@@ -48,6 +52,8 @@ export class CameraController implements IInputReceiver, Tickable
 		this.onMouseDownPosition = new THREE.Vector2();
 		this.onMouseDownTheta = this.theta;
 		this.onMouseDownPhi = this.phi;
+
+		this.positionalRay = new Ray();
 
 		this.actions = {
 			'forward': new KeyBinding('KeyW'),
@@ -108,6 +114,32 @@ export class CameraController implements IInputReceiver, Tickable
 			camera.position.z = this.target.z + this.radius * Math.cos(this.theta * Math.PI / 180) * Math.cos(this.phi * Math.PI / 180);
 			camera.updateMatrix();
 			camera.lookAt(this.target);
+		}
+
+		// check if somethign is in the way
+		this.positionalRay.from = Vector3ToVec3(camera.position);
+		this.positionalRay.to = Vector3ToVec3(this.target);
+
+		const raycastResult = new RaycastResult();
+
+		this.positionalRay.intersectBodies(
+			world.bodies.filter(row => row !== this.characterCaller?.characterCollider?.body),
+			raycastResult
+		)
+
+		if (raycastResult.hasHit) {
+			const newPosition = Vec3ToVector3(raycastResult.hitPointWorld).add(new THREE.Vector3(0, 0.2, 0));
+			console.log(newPosition.distanceTo(this.target))
+			// TODO handle case where its too close to the object
+			if (newPosition.distanceTo(this.target) > .0) {
+				camera.position.copy(newPosition);
+				camera.updateMatrix();
+			} else {
+				// console.log("too far")
+				// this.previousLegitCameraPosition.copy(camera.position);
+				// camera.updateMatrix();
+				// camera.lookAt(this.target)
+			}
 		}
 	}
 

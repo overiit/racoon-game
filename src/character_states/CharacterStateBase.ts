@@ -74,7 +74,7 @@ export abstract class CharacterStateBase implements ICharacterState
 	public setAppropriateDropState(): void
 	{
 		// if: this.character.groundImpactData.velocity.y < -6
-		  // then: fall from high spot, setState to drop hit hard
+		  // then: fall from high spot, setState to drop hit hard (DropRolling)
 		// else:
 		if (this.anyDirection())
 		{
