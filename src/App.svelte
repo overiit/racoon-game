@@ -7,4 +7,4 @@
 	}); 
   </script>
   
-  <canvas bind:this={el}></canvas>
+  <canvas bind:this={el} style="cursor"></canvas>

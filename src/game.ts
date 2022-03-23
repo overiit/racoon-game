@@ -1,7 +1,16 @@
 import { switchScene } from "./engine/SceneManager";
-import LoadingScene from "./scenes/LoadingScene";
+import { LobbyScene } from "./scenes/LobbyScene";
+import OpenWorldScene from "./scenes/OpenWorldScene";
 
-export const initGame = () => {
-    const loadingScene = new LoadingScene();
-    switchScene(loadingScene);
+export const initGame = async () => {
+    // const openWorldScene = new OpenWorldScene();
+    // switchScene(openWorldScene);
+    
+    const lobby = new LobbyScene();
+    switchScene(lobby);
+
+    // game logic goes here
+    while (true) {
+
+    }
 }
