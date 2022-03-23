@@ -1,8 +1,8 @@
 import { Body, Material, RaycastResult, Vec3, World } from 'cannon-es';
-import { AnimationClip, AnimationMixer, BoxGeometry, Group, MathUtils, Matrix4, Mesh, MeshLambertMaterial, Object3D, Quaternion, Vector3 } from 'three';
+import { AnimationAction, AnimationClip, AnimationMixer, BoxGeometry, Group, MathUtils, Matrix4, Mesh, MeshLambertMaterial, Object3D, Quaternion, Vector3 } from 'three';
 import type { CharacterStateBase } from '../character_states/CharacterStateBase';
 import { Idle } from '../character_states/Idle';
-import { camera, world } from '../engine/engine';
+import { camera, gui, world } from '../engine/engine';
 import { getCurrentScene } from '../engine/SceneManager';
 import type { Entity } from '../interfaces/Entity';
 import { GroundImpactData } from '../interfaces/GroundImpactData';
@@ -15,6 +15,8 @@ import { Vec3ToVector3, Vector3ToVec3 } from '../utils/Convert';
 import { appplyVectorMatrixXZ, getForward, getSignedAngleBetweenVectors, haveDifferentSigns, setupMeshProperties } from '../utils/Utils';
 import type { GameWorld } from '../world/GameWorld';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { SphereCollider } from '../physics/colliders/SphereCollider';
+import type { ICollider } from '../interfaces/ICollider';
 
 export enum CollisionGroups {
 	Default = 1,
@@ -57,12 +59,12 @@ export class CharacterController extends Object3D implements Entity
 	public rotationSimulator: RelativeSpringSimulator;
 	public viewVector: Vector3;
 	public actions: { [action: string]: KeyBinding };
-	public characterCapsule: CapsuleCollider;
+	public characterCollider: ICollider;
 	
 	// Ray casting
 	public rayResult: RaycastResult = new RaycastResult();
 	public rayHasHit: boolean = false;
-	public rayCastLength: number = 0.57;
+	public rayCastLength: number = 0.40;
 	public raySafeOffset: number = 0.03;
 	public wantsToJump: boolean = false;
 	public initJumpSpeed: number = -1;
@@ -87,7 +89,7 @@ export class CharacterController extends Object3D implements Entity
 
 		// Model container is used to reliably ground the character, as animation can alter the position of the model itself
 		this.modelContainer = new Group();
-		this.modelContainer.position.y = -0.57;
+		this.modelContainer.position.y = -this.rayCastLength;
 		this.tiltContainer.add(this.modelContainer);
 		this.modelContainer.add(gltf.scene);
 
@@ -116,27 +118,27 @@ export class CharacterController extends Object3D implements Entity
 
 		// Physics
 		// Player Capsule
-		this.characterCapsule = new CapsuleCollider({
+		this.characterCollider = new SphereCollider({
 			mass: 1,
 			position: new Vec3(),
-			height: 0.5,
-			radius: 0.25,
+			// height: 0.55,
+			radius: 0.20,
 			segments: 8,
 			friction: 0.0
 		});
 		// capsulePhysics.physical.collisionFilterMask = ~CollisionGroups.Trimesh;
-		this.characterCapsule.body.shapes.forEach((shape) => {
+		this.characterCollider.body.shapes.forEach((shape) => {
 			// tslint:disable-next-line: no-bitwise
 			shape.collisionFilterMask = ~CollisionGroups.Characters;
 		});
-		this.characterCapsule.body.allowSleep = false;
+		this.characterCollider.body.allowSleep = false;
 
 		// Move character to different collision group for raycasting
-		this.characterCapsule.body.collisionFilterGroup = 2;
+		this.characterCollider.body.collisionFilterGroup = 2;
 
 		// Disable character rotation
-		this.characterCapsule.body.fixedRotation = true;
-		this.characterCapsule.body.updateMassProperties();
+		this.characterCollider.body.fixedRotation = true;
+		this.characterCollider.body.updateMassProperties();
 
 		// Ray cast debug
 		const boxGeo = new BoxGeometry(0.1, 0.1, 0.1);
@@ -149,20 +151,18 @@ export class CharacterController extends Object3D implements Entity
 		// Physics pre/post step callback bindings
 		world.addEventListener('preStep',  (preStep: PhysicsPrePostStep) => {
 			for (const body of preStep.target.bodies) {
-				if (body === this.characterCapsule.body) {
+				if (body === this.characterCollider.body) {
 					this.physicsPreStep(body, this);
 				}
 			}
 		});
 		world.addEventListener('postStep',  (postStep: PhysicsPrePostStep) => { 
 			for (const body of postStep.target.bodies) {
-				if (body === this.characterCapsule.body) {
+				if (body === this.characterCollider.body) {
 					this.physicsPostStep(body, this);
 				}
 			}
 		});
-		// this.characterCapsule.body.preStep = (body: Body) => { this.physicsPreStep(body, this); };
-		// this.characterCapsule.body.postStep = (body: Body) => { this.physicsPostStep(body, this); };
 
 		// States
 		this.setState(new Idle(this));
@@ -197,9 +197,9 @@ export class CharacterController extends Object3D implements Entity
 	{
 		if (this.physicsEnabled)
 		{
-			this.characterCapsule.body.previousPosition = new Vec3(x, y, z);
-			this.characterCapsule.body.position = new Vec3(x, y, z);
-			this.characterCapsule.body.interpolatedPosition = new Vec3(x, y, z);
+			this.characterCollider.body.previousPosition = new Vec3(x, y, z);
+			this.characterCollider.body.position = new Vec3(x, y, z);
+			this.characterCollider.body.interpolatedPosition = new Vec3(x, y, z);
 		}
 		else
 		{
@@ -215,9 +215,9 @@ export class CharacterController extends Object3D implements Entity
 		this.velocity.y = 0;
 		this.velocity.z = 0;
 
-		this.characterCapsule.body.velocity.x = 0;
-		this.characterCapsule.body.velocity.y = 0;
-		this.characterCapsule.body.velocity.z = 0;
+		this.characterCollider.body.velocity.x = 0;
+		this.characterCollider.body.velocity.y = 0;
+		this.characterCollider.body.velocity.z = 0;
 
 		this.velocitySimulator.init();
 	}
@@ -251,11 +251,11 @@ export class CharacterController extends Object3D implements Entity
 
 		if (value === true)
 		{
-			world.addBody(this.characterCapsule.body);
+			world.addBody(this.characterCollider.body);
 		}
 		else
 		{
-			world.removeBody(this.characterCapsule.body);
+			world.removeBody(this.characterCollider.body);
 		}
 	}
 
@@ -375,17 +375,17 @@ export class CharacterController extends Object3D implements Entity
 		if (this.physicsEnabled)
 		{
 			this.position.set(
-				this.characterCapsule.body.interpolatedPosition.x,
-				this.characterCapsule.body.interpolatedPosition.y,
-				this.characterCapsule.body.interpolatedPosition.z
+				this.characterCollider.body.interpolatedPosition.x,
+				this.characterCollider.body.interpolatedPosition.y,
+				this.characterCollider.body.interpolatedPosition.z
 			);
 		}
 		else {
 			let newPos = new Vector3();
 			this.getWorldPosition(newPos);
 
-			this.characterCapsule.body.position.copy(Vector3ToVec3(newPos));
-			this.characterCapsule.body.interpolatedPosition.copy(Vector3ToVec3(newPos));
+			this.characterCollider.body.position.copy(Vector3ToVec3(newPos));
+			this.characterCollider.body.interpolatedPosition.copy(Vector3ToVec3(newPos));
 		}
 
 		this.updateMatrixWorld();
@@ -405,8 +405,11 @@ export class CharacterController extends Object3D implements Entity
         this.getWorldPosition(this.world.cameraController.target);
 	}
 
+	currentAction: AnimationAction;
+
 	public setAnimation(clipName: string, fadeIn: number): number
 	{
+		console.log("setting animation", clipName);
 		if (this.mixer !== undefined)
 		{
 			// gltf
@@ -416,15 +419,21 @@ export class CharacterController extends Object3D implements Entity
 			if (action === null)
 			{
 				console.error(`Animation ${clipName} not found!`);
-				if (clipName !== 'tpose') {
-					return this.setAnimation('tpose', fadeIn);
-				}
 				return 0;
 			}
+			// this.mixer.stopAllAction();
+			if (this.currentAction && this.currentAction != action) {
+				this.currentAction.fadeOut(fadeIn);
+			}
 
-			this.mixer.stopAllAction();
-			action.fadeIn(fadeIn);
-			action.play();
+			action
+			.reset()
+			.setEffectiveTimeScale( 1 )
+			.setEffectiveWeight( 1 )
+			.fadeIn( fadeIn )
+			.play();
+
+			this.currentAction = action;
 
 			return action.getClip().duration;
 		}
@@ -527,7 +536,7 @@ export class CharacterController extends Object3D implements Entity
 	{
 		// Player ray casting
 		// Create ray
-		let body = this.characterCapsule.body;
+		let body = this.characterCollider.body;
 		const start = new Vec3(body.position.x, body.position.y, body.position.z);
 		const end = new Vec3(body.position.x, body.position.y - this.rayCastLength - this.raySafeOffset, body.position.z);
 		// Raycast options
@@ -666,7 +675,7 @@ export class CharacterController extends Object3D implements Entity
 			gameWorld.addEntity(this);
 
 			// Register physics
-			world.addBody(this.characterCapsule.body);
+			world.addBody(this.characterCollider.body);
 
 			// Add to graphicsWorld
 			gameWorld.world.add(this);
@@ -703,7 +712,7 @@ export class CharacterController extends Object3D implements Entity
 			gameWorld.removeEntity(this);
 
 			// Remove physics
-			world.removeBody(this.characterCapsule.body);
+			world.removeBody(this.characterCollider.body);
 
 			// Remove visuals
 			gameWorld.world.remove(this);

@@ -7,5 +7,4 @@ export * from './JumpIdle';
 export * from './JumpRunning';
 export * from './Sprint';
 export * from './StartWalkBase';
-export * from './StartWalkForward';
 export * from './Walk';

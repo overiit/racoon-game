@@ -7,7 +7,6 @@ import {
 	DropRolling,
 	Falling,
 	Sprint,
-	StartWalkForward,
 	Walk,
 } from './_stateLibrary';
 
@@ -74,11 +73,10 @@ export abstract class CharacterStateBase implements ICharacterState
 
 	public setAppropriateDropState(): void
 	{
-		if (this.character.groundImpactData.velocity.y < -6)
-		{
-			this.character.setState(new DropRolling(this.character));
-		}
-		else if (this.anyDirection())
+		// if: this.character.groundImpactData.velocity.y < -6
+		  // then: fall from high spot, setState to drop hit hard
+		// else:
+		if (this.anyDirection())
 		{
 			// if (this.character.groundImpactData.velocity.y < -2)
 			// {
@@ -104,7 +102,7 @@ export abstract class CharacterStateBase implements ICharacterState
 
 	public setAppropriateStartWalkState(): void
 	{
-		this.character.setState(new StartWalkForward(this.character));
+		this.character.setState(new Walk(this.character));
 	}
 
 	protected playAnimation(animName: string, fadeIn: number): void

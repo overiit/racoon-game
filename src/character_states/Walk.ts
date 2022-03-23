@@ -30,11 +30,6 @@ export class Walk extends CharacterStateBase
 	{
 		super.onInputChange();
 
-		if (this.noDirection())
-		{
-			this.character.setState(new Idle(this.character));
-		}
-		
 		if (this.character.actions.run.isPressed)
 		{
 			this.character.setState(new Sprint(this.character));

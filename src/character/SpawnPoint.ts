@@ -17,8 +17,7 @@ export class CharacterSpawnPoint
 	
 	public spawn(): void
 	{
-		const GROUP = ModelSources.racoon_model.modelPath;
-		loadGLTF(GROUP, { castShadow: true }).then((model) => {
+		loadGLTF(ModelSources.racoon_model.modelPath, { castShadow: true }).then((model) => {
 			let player = new CharacterController(model);
 			
 			let worldPos = new Vector3();
